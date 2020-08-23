@@ -8,14 +8,14 @@ Este trabalho apresenta um conversor analógico digital muito simples que implem
 
 Pois bem. Os requisitos do meus sistema eram medir uma tensão em intervalor regulares de um segundo. Ou seja, o tempo de processamento da amostragem até processamento da tensão não eram críticos e podiam ser feitos com qualquer hardware ou software disponível no Raspberry. 
 
-# Conversor analógico digital 
+# 1. Conversor analógico digital 
 Um conversor analógico digital (CAD) pode ser implementado de várias maneiras. Em sistemas onde o tempo de processamento tem que ser muito rápido, pode-se usar sistemas digitais baseado em comparadores que codificam a tensão analógica de forma instantánea. O preço que se paga pela rapidez é na quantidade de comparadores que se precisa usar e a complexidade de sua implementação. 
 Entretanto, a grande maioria dos conversores usam um sistema muito mais simples que são compostos por um conversor digital analógico (CDA), um comparador analógico e um algoritmo de conversão implementado em software ou hardware. 
 Dependendo da aplicação a gente escolha o tempo de conversão, a resolução do conversor e o algoritmo de conversão. 
 
 Neste nosso caso específico, vamos usar todos estes recursos já disponíveis no Raspberry Pi. O único componente externo vai ser o comparador analógico.
 
-## Algoritmo de conversão
+## 1.1. Algoritmo de conversão
 O algoritmo que implemente a conversão analógico digital funciona da seguinte forma. O computador gera por meio do conversor digital analógico (CDA) um sinal analógico e compara este valor ao sinal que se pretende medir por meio de um comparador analógico. A maneira mais simples de fazer isso é iniciar o CDA com o valor zero e vai incrementando o valor até que o comparador avisa que o valor gerada é maior que o valor sendo comparado. 
 Obivamente, este algoritmo pode levar algum tempo, pois depende do valor do sinal a ser medido e a quantidade de bits. 
 Por exemplo, se o valor medido está no fim da escala, e o conversor trabalha com 8 bits, o tempo para fazer este processamento vai ser em torno de 255 vezes o tempo de fazer a conversão digital analógico.
@@ -25,7 +25,7 @@ Estistem algoritmos mais eficazes que fazer a conversão num periodo muito mais 
 
 Neste exemplo vamos usar o algoritmo de aproximação sucessiva com uma resolução de oito bits.
 
-## Conversor digital analógico
+## 1.2. Conversor digital analógico
 O Raspberry Pi tem diversos pinos de entrada e saída. Estes GPIO (pinos de entrada e saída gerias) podem ser usados para interfacear com diversos circuitos externos. Alguns desses pinos podem ser configurados para implementar uma técnica muito simples de conversão digital analógica usando modulação por largura de pulsos ou Pulse Widht Modulation PWM.
 O PWM pode ser implementado por software ou pelo próprio hardware do Raspberry Pi. No nosso caso optamos em usar o PWM gerado pelo hardware do Raspberry Pi. O PWM por software tem uma limitação de 10 Hz, enquanto o PWM por hardware pode gerar sinais na ordem de algumas decenas de khz. 
 
@@ -34,7 +34,7 @@ O uso de harware PWM está limitado somente a quatro pinos do Raspberry Pi (GPIO
 O diagrama de blocos a seguir apresenta o processo de conversão tendo um PWM gerando um sinal digital que depois é filtrado por um filtro passabaixa que transforme o sinal digital modulado no seu correspodente analógica, que é comparado com o sinal a ser medido. 
 
 
-## Filtro passa baixa
+## 1.3. Filtro passa baixa
 
 Compromisso entre a efetividade do filtro e o tempo de acomodação do filtro a uma mudança na sua entrada. 
 O filtro é implementado com um circuito RC simples. A frequencia de corte é 1/(2 pi R C). O tempo de acomodação do filtro é dado pelo produto R C. 
@@ -56,29 +56,37 @@ Por exemplo com um capacitor de 1 micro farad e um resistor de 1,2 kOhms chega s
 ![](figuras/pwm_trans.jpg)
 
 
-# Hardware
+# 2. Implementação do hardware
 
-## Diagrama de blocos
-![](diagrama_blocos.png)
+## 2.1. Diagrama de blocos
+![](figuras/diagrama_blocos.png)
 
-## Circuito implementado
+
+## 2.2. Circuito implementado
 A implementação do circuito foi realizado com um comparador LM393 que contem dois comparador com saída em coletor aberto.
 Dessa forma foi possível implementar dois circuitos.
 
-| adc | pino | rasp | pino |
-|:---:|:----:|:----:|:-----|
+| adc | pino | rasp | pino | 
+|:---:|:----:|:----:|:----:|
 | Vcc |  1   | Vcc  |   2  |
 |3.3v |  2   | 3.3v |   1  |
-| S1  |  3   |      |      |
-| S2  |  4   |      |      |
-| pwm |  5   |      |      |
-| gnd |  6   |      |      |
+| S1  |  3   |GPIO.2|  13  |
+| S2  |  4   |GPIO.3|  15  |
+| pwm |  5   |GPIO.1|  12  |
+| gnd |  6   | gnd  |   6  |
 
 ![](figuras/rasp_adc_kicad.png)
 
+Pinagem do conector do Raspberry Pi
+
+| pin | out |
+|:---:|:---:|
+| 1   |  2  |
+| 3   |  4  |
+| 5   |  6  |
 
 
-## Configuração do PWM
+## 2.3. Configuração do PWM
 
 O Raspberry Pi tem várias maneiras de você configurar o GPIO e permtir os acessos a estes pinos. 
 
@@ -88,14 +96,14 @@ Também há bibliotecas específicas para linguagem C, Python e outras linguagen
 
 No nosso caso vamos usar um misto de ferramentas para configurar o GPIO com as ferramentas consolidados do Raspberry e linguagem C para acessar o sistema de arquivos. 
 
-### configuração do GIO 
+### 2.3.1. configuração do GIO 
 
 O utilitário ```gpio``` que já vem com o Raspberry Pi pode ser util para preparar o hardware.
 O comando 
 
 ```gpio readall``` executado no terminal do linux mostra a seguinte tela.
 
-![](gpio_readall.png)
+![](figuras/gpio_readall.png)
 
 Há uma confusão na numeração dos pinos de GPIO do Raspberry. Tem a numeração física dos pinos, neste caso num Raspberry Pi a versão xxx que tem um conector de 28 pinos. 
 
@@ -131,7 +139,7 @@ void setup_pwm(void)
 }
 ```
 
-### Mapeamento dos pinos no sistema de arquivos
+### 2.3.2. Mapeamento dos pinos no sistema de arquivos
 
 ```
 
@@ -175,7 +183,7 @@ void escreve_pwm(int i)
 ```
 
 
-# Algoritmo de aproximação sucessiva
+# 3. Algoritmo de aproximação sucessiva
 
 ```
 int leia_adc(int num_gpio) 
